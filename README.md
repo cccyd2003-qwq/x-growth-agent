@@ -1,11 +1,24 @@
-# xgrowth — X (Twitter) 0-to-1 growth agent
+<div align="center">
 
-Poll a watchlist of X accounts, and when one posts, have **your own local Claude
-Code / Codex** draft 2–3 witty, scroll-stopping reply candidates — then get pinged
-on **Telegram** so you pick one and post it yourself.
+<img src="docs/logo.png" alt="xgrowth" width="96" height="96">
 
-Built for going from **0 to 1** on X: the fastest organic growth is replying to
-bigger accounts with something people actually notice.
+# xgrowth
+
+**Watch the right accounts · draft replies that get noticed · go from 0 → 1 on X.**
+
+An open-source X (Twitter) growth agent. Point it at a watchlist, and when someone
+posts, your *own* local Claude Code / Codex drafts 2–3 short, witty replies — then
+pings you on Telegram so you pick one and post it yourself.
+
+[![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-ff69b4.svg)](https://www.python.org)
+[![Brain](https://img.shields.io/badge/brain-Claude_Opus_4.8-ff69b4.svg)](https://claude.com/claude-code)
+[![Notify](https://img.shields.io/badge/notify-Telegram-ff69b4.svg)](https://telegram.org)
+[![BYO](https://img.shields.io/badge/keys-bring_your_own-ff69b4.svg)](#requirements-all-yours-to-provide)
+
+[How it works](#how-it-works) · [Install](#install) · [Quickstart](#quickstart) · [Commands](#commands) · [Config](#configuration) · [Telegram](#telegram-setup-60-seconds) · [Roadmap](#roadmap)
+
+</div>
 
 > **Open-source · bring-your-own-key.** The LLM thinking runs on *your* machine
 > through the coding agent you already use. xgrowth never proxies your credentials,
@@ -13,24 +26,13 @@ bigger accounts with something people actually notice.
 
 ---
 
-![xgrowth architecture](docs/architecture.png)
+<div align="center">
+
+<img src="docs/architecture.png" alt="how xgrowth runs" width="100%">
+
+</div>
 
 ## How it works
-
-```
-  ┌─ your local Claude Code / Codex ─┐   the "brain" (your login, your model)
-  │   drafts the witty replies        │
-  └───────────────▲──────────────────┘
-                  │ headless: claude -p / codex exec
-  ┌───────────────┴──────────────────┐
-  │  xgrowth engine (always awake)    │   polls the whole watchlist in 1 call/cycle,
-  │  poll → draft → digest → notify   │   on a daily time window you set
-  └───────────────┬──────────────────┘
-                  │
-            ┌─────▼─────┐  one digest per cycle: a list of every new post,
-            │ your phone │  tap a post → full text + drafts + [📋 copy] [🔄 regen] [🔗 original]
-            └───────────┘  not happy? reply to the bot ("punchier" / "shorter") → re-drafted
-```
 
 The engine is the always-awake **scheduler**; your Claude Code / Codex is the
 **brain** that gets woken up, thinks for a few seconds, and goes back to sleep.
@@ -38,29 +40,31 @@ You don't keep a chat window open.
 
 **Highlights**
 
-- **Digest, not spam.** Each poll cycle arrives as *one* Telegram message listing
+- 🗂 **Digest, not spam.** Each poll cycle arrives as *one* Telegram message listing
   every new post (with "N minutes ago"). Tap a post to drill into the full text and
   reply suggestions — like a merged-forward card.
-- **Conversational revise.** Reply to any draft message with an instruction
-  (`更毒一点`, `shorter`, `make it a meme`) and the brain re-drafts on the spot.
-- **Punchy by default.** Replies are capped at ~20 words (usually 10–15) — the
+- 💬 **Conversational revise.** Reply to any draft with an instruction (`punchier`,
+  `shorter`, `make it a meme`) and the brain re-drafts on the spot.
+- ✂️ **Punchy by default.** Replies are capped at ~20 words (usually 10–15) — the
   length that actually lands on X.
-- **Time-windowed polling.** Only polls inside a daily window (default Beijing
+- ⏰ **Time-windowed polling.** Only polls inside a daily window (default Beijing
   12:00–02:00, every 2h) so you don't burn API quota overnight.
+- 🐦 **One call per cycle.** With the RapidAPI provider, the whole watchlist is polled
+  in a single API call (each account's latest tweet comes back inline).
 
 ## Requirements (all yours to provide)
 
 | Need | Where |
 | --- | --- |
-| **Twitter data** — a RapidAPI key (default, cheap) *or* official X API v2 bearer | https://rapidapi.com (e.g. *twitter241*) · https://developer.x.com |
+| **Twitter data** — a RapidAPI key (default, cheap) *or* official X API v2 bearer | [rapidapi.com](https://rapidapi.com) (e.g. *twitter241*) · [developer.x.com](https://developer.x.com) |
 | **Claude Code** *or* **Codex** CLI installed | the "brain" (default model: Opus 4.8) |
 | **Telegram bot token** | message [@BotFather](https://t.me/BotFather), `/newbot` |
 | Python 3.10+ | |
 
 > **Twitter provider.** Default is `rapidapi` — subscribe to a Twitter API on
 > RapidAPI, copy the `x-rapidapi-key`, and the whole watchlist is polled in a
-> *single* call per cycle (each user's latest tweet comes back inline). Set
-> `twitter.provider: official` to use the official X API v2 instead.
+> *single* call per cycle. Set `twitter.provider: official` to use the official
+> X API v2 instead.
 
 ## Install
 
@@ -121,8 +125,8 @@ Lives at `~/.xgrowth/config.yaml` (override the dir with `XGROWTH_HOME`). See
 - `notify.provider` — `telegram` (full: digest + drill-in + conversational revise),
   `lark` / `bark` (stubs)
 
-Secrets can also come from env vars: `XGROWTH_TWITTER_BEARER`,
-`XGROWTH_TELEGRAM_TOKEN`, `XGROWTH_TELEGRAM_CHAT`.
+Secrets can also come from env vars: `XGROWTH_RAPIDAPI_KEY`, `XGROWTH_TELEGRAM_TOKEN`,
+`XGROWTH_TELEGRAM_CHAT`.
 
 ## Telegram setup (60 seconds)
 
@@ -131,8 +135,10 @@ Secrets can also come from env vars: `XGROWTH_TWITTER_BEARER`,
 3. Send any message to your new bot.
 4. Run `xgrowth test-notify` — it finds and saves your `chat_id` automatically.
 
-The reply card uses native Telegram **copy buttons** (tap to copy a draft to your
-clipboard) and a **🔄 换一批** button that asks the brain for a fresh set.
+Each poll cycle sends **one digest message** listing every new post. Tap a post to
+open its full text + reply drafts, with native **copy buttons**, a **🔄 regenerate**
+button, and a link to the original. Don't like a draft? Just **reply to it** with an
+instruction and the brain rewrites it.
 
 ## Skills (for Claude Code / Codex)
 
@@ -145,22 +151,21 @@ The reply voice is defined once in `xgrowth/prompts.py` and seeded by
 [`examples/replies.jsonl`](examples/replies.jsonl) — add your favorite real replies
 there to make the engine sharper over time.
 
-## Roadmap
-
-- **MVP (this repo):** CLI engine (claude + codex) · reply-craft & watchlist skills · Telegram · local panel.
-- **Next:** richer panel, more notifiers (full 飞书/Bark), reply analytics.
-- **Closed-source paid tier (separate):** hosted 24/7 cloud scheduling, web dashboard, managed keys.
-
 ## Troubleshooting
 
-- **`claude exited 1: ... model (claude-...) may not exist or you may not have access`** —
-  your Claude Code default model isn't available in headless (`-p`) mode. Pin a
-  known-good one in config: `engine.model: claude-haiku-4-5` (fast/cheap) or a
-  Sonnet/Opus id you have access to.
-- **`✗ ✓ ... gbk codec` / garbled output on Windows** — handled automatically;
-  xgrowth forces UTF-8 stdout. If you still see issues, run in Windows Terminal.
-- **`/following endpoint` errors on `import-following`** — some X API tiers require
-  elevated access for that endpoint. Add accounts manually with `xgrowth add` instead.
+- **`claude exited 1: ... model may not exist or you may not have access`** — your
+  Claude Code default model isn't available in headless (`-p`) mode. Pin a known-good
+  one in config: `engine.model: claude-haiku-4-5` or a Sonnet/Opus id you have access to.
+- **Garbled output on Windows** — handled automatically; xgrowth forces UTF-8 stdout.
+- **`/following` errors on `import-following`** — some API tiers gate that endpoint;
+  add accounts manually with `xgrowth add` instead.
+
+## Roadmap
+
+- **MVP (this repo):** CLI engine (claude + codex) · reply-craft & watchlist skills ·
+  Telegram digest + drill-in + conversational revise · local panel · time-windowed polling.
+- **Next:** richer panel, full 飞书/Bark notifiers, reply analytics, cloud deploy guide.
+- **Closed-source paid tier (separate):** hosted 24/7 cloud scheduling, web dashboard, managed keys.
 
 ## Design notes
 
