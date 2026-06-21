@@ -2,7 +2,7 @@
 
 <img src="docs/logo.png" alt="xgrowth" width="96" height="96">
 
-# xgrowth
+# HypeX
 
 **Watch the right accounts · draft replies that get noticed · go from 0 → 1 on X.**
 
