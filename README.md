@@ -12,7 +12,6 @@ pings you on Telegram so you pick one and post it yourself.
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-ff69b4.svg)](https://www.python.org)
-[![Brain](https://img.shields.io/badge/brain-Claude_Opus_4.8-ff69b4.svg)](https://claude.com/claude-code)
 [![Notify](https://img.shields.io/badge/notify-Telegram-ff69b4.svg)](https://telegram.org)
 [![BYO](https://img.shields.io/badge/keys-bring_your_own-ff69b4.svg)](#requirements-all-yours-to-provide)
 
