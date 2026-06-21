@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xgrowth"
+version = "0.1.0"
+description = "X (Twitter) 0-to-1 growth agent — poll accounts, draft witty replies with your own Claude Code / Codex, ping you on Telegram."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "X Growth Agent contributors" }]
+keywords = ["twitter", "x", "growth", "agent", "claude", "codex", "telegram"]
+
+dependencies = [
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.scripts]
+xgrowth = "xgrowth.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/cccyd2003-qwq/x-growth-agent"
+Repository = "https://github.com/cccyd2003-qwq/x-growth-agent"
+
+[tool.hatch.build.targets.wheel]
+packages = ["xgrowth"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

@@ -1,0 +1,71 @@
+# xgrowth configuration — copy to ~/.xgrowth/config.yaml (or run `xgrowth init`)
+# Every key here is BRING-YOUR-OWN. xgrowth never ships or proxies credentials.
+
+twitter:
+  # Which data provider to use: rapidapi (default) | official
+  provider: rapidapi
+
+  # --- rapidapi (recommended: cheap, generous limits) ---
+  # A RapidAPI Twitter proxy. Default schema matches twitter241.
+  # Get a key at https://rapidapi.com  ->  subscribe to a Twitter API  ->  copy x-rapidapi-key
+  rapidapi_key: ""
+  rapidapi_host: "twitter241.p.rapidapi.com"
+
+  # --- official (only used when provider: official) ---
+  # X / Twitter API v2 Bearer token (App-only). https://developer.x.com
+  bearer_token: ""
+
+poll:
+  # How often to check the watchlist for new posts (minutes).
+  interval_minutes: 120
+  # Add small random +/- jitter so you don't hit the API on an exact schedule.
+  jitter: true
+  # Only poll inside a daily time window (saves API quota overnight).
+  # Hours use timezone_offset; the window may wrap past midnight.
+  timezone_offset: 8       # UTC+8 (Beijing)
+  active_start_hour: 12    # start polling at 12:00 noon
+  active_end_hour: 2       # stop at 02:00 the next morning
+  # Max new tweets to process per account per cycle (keeps API spend bounded).
+  max_per_account: 5
+  # Skip retweets / replies — usually you only want original posts.
+  exclude_replies: true
+  exclude_retweets: true
+
+engine:
+  # Which local coding agent to use as the "brain": claude | codex
+  provider: claude
+  # Model passed to the headless CLI. Default is Opus 4.8 (best reply quality).
+  # If a model 404s in headless mode, swap to one you have access to.
+  model: "claude-opus-4-8"
+  # Path / command for each agent (change if not on PATH).
+  claude_path: claude
+  codex_path: codex
+  # How many reply candidates to generate per post.
+  num_candidates: 3
+  # Reply styles to rotate through. Tweak freely.
+  styles:
+    - 神补刀        # witty add-on / punchline
+    - 反直觉        # contrarian-but-smart hot take
+    - 一句戳中      # one sharp question or observation
+  # Seconds to wait for the brain before giving up on a post.
+  timeout_seconds: 120
+
+notify:
+  # Which notifier to use: telegram | lark | bark
+  provider: telegram
+  telegram:
+    # From @BotFather: send /newbot, copy the token here.
+    bot_token: ""
+    # Your chat id. Run `xgrowth test-notify` after setting bot_token and it
+    # will tell you how to capture this if it's empty.
+    chat_id: ""
+  lark:
+    webhook_url: ""      # 飞书自定义机器人 webhook (stub)
+  bark:
+    server: "https://api.day.app"
+    device_key: ""       # Bark device key (stub, iOS)
+
+panel:
+  enabled: true
+  host: "127.0.0.1"
+  port: 7777

@@ -1,0 +1,45 @@
+flowchart TD
+    start([__start__]) --> loadConfig[loadConfig and keys]
+    loadConfig --> P_in
+
+    subgraph pollLoop[pollLoopSubGraph - every 10 to 120 min]
+        direction TB
+        P_in([__start__]) --> forEach{for each watched account}
+        forEach --> getTweets[getRecentTweets - since_id incremental]
+        getTweets --> filterNew[filterNew - dedup, drop RT and replies]
+        filterNew --> P_out([__end__])
+    end
+
+    pollLoop --> hasNew{new posts?}
+    hasNew -- no --> sleep[sleep interval]
+    sleep --> pollLoop
+    hasNew -- yes --> D_in
+
+    subgraph draft[draftSubGraph - per new post]
+        direction TB
+        D_in([__start__]) --> buildPrompt[buildPrompt - house rules + few-shot]
+        buildPrompt --> callBrain[callBrain - claude/codex headless, Opus 4.8]
+        callBrain --> parse[parseCandidates - strict JSON]
+        parse -- parse fail --> callBrain
+        parse --> D_out([__end__])
+    end
+
+    draft --> save[(store: save candidates)]
+    save --> N_in
+
+    subgraph notify[notifySubGraph]
+        direction TB
+        N_in([__start__]) --> formatCard[formatCard - tweet + 2-3 drafts]
+        formatCard --> sendTg[sendTelegram - card + inline buttons]
+        sendTg --> N_out([__end__])
+    end
+
+    notify --> listen{Telegram buttons}
+    listen -- regenerate --> regen[regenerate]
+    regen --> draft
+    listen -- copy --> userPost([user posts on X manually])
+    listen -- open original --> userPost
+    notify --> sleep
+
+    save -. read .-> panel[[local panel - localhost:7777]]
+    panel -. add/remove/regen .-> save
