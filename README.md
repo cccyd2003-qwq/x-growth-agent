@@ -13,6 +13,8 @@ bigger accounts with something people actually notice.
 
 ---
 
+![xgrowth architecture](docs/architecture.png)
+
 ## How it works
 
 ```
@@ -33,8 +35,6 @@ bigger accounts with something people actually notice.
 The engine is the always-awake **scheduler**; your Claude Code / Codex is the
 **brain** that gets woken up, thinks for a few seconds, and goes back to sleep.
 You don't keep a chat window open.
-
-Full run flow: [`docs/architecture.png`](docs/architecture.png).
 
 **Highlights**
 
