@@ -55,16 +55,17 @@
 ## 安装
 
 ```bash
-git clone https://github.com/cccyd2003-qwq/x-growth-agent
-cd x-growth-agent
-pip install -e .
+# 推荐:用 pipx 隔离安装这个 CLI 工具
+pipx install git+https://github.com/cccyd2003-qwq/x-growth-agent
+# 或者用 pip:
+git clone https://github.com/cccyd2003-qwq/x-growth-agent && cd x-growth-agent && pip install -e .
 ```
 
 ## 快速上手
 
 ```bash
-xgrowth init                       # 生成 ~/.xgrowth/config.yaml + 数据库
-# 编辑 ~/.xgrowth/config.yaml:填入 twitter.rapidapi_key 和 notify.telegram.bot_token
+xgrowth setup                      # 引导式向导:一条命令填好 key/大脑/Telegram/时间表
+# (或手动:xgrowth init 后编辑 ~/.xgrowth/config.yaml)
 
 xgrowth test-notify                # 验证 Telegram,自动抓取你的 chat_id
 xgrowth add naval                  # 监控一个账号
@@ -86,7 +87,9 @@ xgrowth draft "the most important skill of the next decade is learning to learn"
 
 | 命令 | 作用 |
 | --- | --- |
+| `xgrowth setup` | 引导式向导:填 key/大脑/Telegram/时间表 |
 | `xgrowth init` | 创建配置 + 数据库 |
+| `xgrowth schedule` | 查看/修改轮询时间表(间隔 + 每日时间窗) |
 | `xgrowth add <handle>` | 把一个账号加入监控名单 |
 | `xgrowth rm <handle>` | 移除一个账号 |
 | `xgrowth list` | 查看监控名单 |
