@@ -4,7 +4,7 @@
 
 # HypeX
 
-**Watch the right accounts · draft replies that get noticed · go from 0 → 1 on X.**
+**go from 0 → 1 on X · Be a reply guy · **
 
 An open-source X (Twitter) growth agent. Point it at a watchlist, and when someone
 posts, your *own* local Claude Code / Codex drafts 2–3 short, witty replies — then
