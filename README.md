@@ -4,68 +4,55 @@
 
 # xgrowth
 
-**Watch the right accounts · draft replies that get noticed · go from 0 → 1 on X.**
+**go from 0 → 1 on X: Be first to every post.**
 
-An open-source X (Twitter) growth agent. Point it at a watchlist, and when someone
-posts, your *own* local Claude Code / Codex drafts 2–3 short, witty replies — then
-pings you on Telegram so you pick one and post it yourself.
+一个开源的 X(推特)涨粉 Agent。给它一份关注名单,有人发新帖时,用**你自己本机的 Claude Code / Codex** 起草 2–3 条短小、有梗的回复,再推到你的 **Telegram** —— 你挑一条,自己去发。
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-ff69b4.svg)](https://www.python.org)
 [![Notify](https://img.shields.io/badge/notify-Telegram-ff69b4.svg)](https://telegram.org)
-[![BYO](https://img.shields.io/badge/keys-bring_your_own-ff69b4.svg)](#requirements-all-yours-to-provide)
+[![BYO](https://img.shields.io/badge/keys-自带密钥-ff69b4.svg)](#需要你自己提供的东西)
 
-[How it works](#how-it-works) · [Install](#install) · [Quickstart](#quickstart) · [Commands](#commands) · [Config](#configuration) · [Telegram](#telegram-setup-60-seconds) · [Roadmap](#roadmap)
+[工作原理](#工作原理) · [安装](#安装) · [快速上手](#快速上手) · [命令](#命令) · [配置](#配置) · [Telegram](#telegram-配置60-秒) · [路线图](#路线图)
+
+**[English](README_EN.md) | 简体中文**
 
 </div>
 
-> **Open-source · bring-your-own-key.** The LLM thinking runs on *your* machine
-> through the coding agent you already use. xgrowth never proxies your credentials,
-> and never auto-posts on your behalf.
+> **开源 · 自带密钥(BYO-key)。** 大模型的"思考"跑在**你自己机器上**、用你已经在用的 coding agent。xgrowth 从不代理你的密钥,也从不替你自动发帖。
 
 ---
 
 <div align="center">
 
-<img src="docs/architecture.png" alt="how xgrowth runs" width="100%">
+<img src="docs/architecture.png" alt="xgrowth 运行流程" width="100%">
 
 </div>
 
-## How it works
+## 工作原理
 
-The engine is the always-awake **scheduler**; your Claude Code / Codex is the
-**brain** that gets woken up, thinks for a few seconds, and goes back to sleep.
-You don't keep a chat window open.
+引擎是一个**一直醒着的调度器**;你的 Claude Code / Codex 是**大脑**——被叫醒、思考几秒、再睡回去。你**不用一直开着聊天窗口**。
 
-**Highlights**
+**亮点**
 
-- 🗂 **Digest, not spam.** Each poll cycle arrives as *one* Telegram message listing
-  every new post (with "N minutes ago"). Tap a post to drill into the full text and
-  reply suggestions — like a merged-forward card.
-- 💬 **Conversational revise.** Reply to any draft with an instruction (`punchier`,
-  `shorter`, `make it a meme`) and the brain re-drafts on the spot.
-- ✂️ **Punchy by default.** Replies are capped at ~20 words (usually 10–15) — the
-  length that actually lands on X.
-- ⏰ **Time-windowed polling.** Only polls inside a daily window (default Beijing
-  12:00–02:00, every 2h) so you don't burn API quota overnight.
-- 🐦 **One call per cycle.** With the RapidAPI provider, the whole watchlist is polled
-  in a single API call (each account's latest tweet comes back inline).
+- 🗂 **合并消息,不刷屏。** 每轮轮询只发**一条** Telegram 消息,列出这一轮所有新帖(带"几分钟前")。点进任意一条看全文 + 回复建议——像微信的合并转发卡片。
+- 💬 **对话式改写。** 对任意一条回复直接回一句指令(`更毒一点`、`更短`、`换个梗`),大脑当场重写。
+- ✂️ **默认极短。** 回复限制在 ~20 词以内(通常 10–15 词)—— 这才是 X 上真正能"接住"的长度。
+- ⏰ **按时间窗轮询。** 只在每天的一个时间窗内轮询(默认北京时间 12:00–02:00,每 2 小时一次),不在凌晨白白烧 API 额度。
+- 🐦 **每轮一次调用。** 用 RapidAPI provider 时,整份关注名单**一次 API 调用**就拉完(每个号的最新帖内联返回)。
 
-## Requirements (all yours to provide)
+## 需要你自己提供的东西
 
-| Need | Where |
+| 需要 | 在哪拿 |
 | --- | --- |
-| **Twitter data** — a RapidAPI key (default, cheap) *or* official X API v2 bearer | [rapidapi.com](https://rapidapi.com) (e.g. *twitter241*) · [developer.x.com](https://developer.x.com) |
-| **Claude Code** *or* **Codex** CLI installed | the "brain" (default model: Opus 4.8) |
-| **Telegram bot token** | message [@BotFather](https://t.me/BotFather), `/newbot` |
+| **推特数据** —— RapidAPI key(默认,便宜)*或* 官方 X API v2 bearer | [rapidapi.com](https://rapidapi.com)(如 *twitter241*)· [developer.x.com](https://developer.x.com) |
+| 装好 **Claude Code** *或* **Codex** CLI | "大脑"(默认模型 Opus 4.8) |
+| **Telegram bot token** | 找 [@BotFather](https://t.me/BotFather) 发 `/newbot` |
 | Python 3.10+ | |
 
-> **Twitter provider.** Default is `rapidapi` — subscribe to a Twitter API on
-> RapidAPI, copy the `x-rapidapi-key`, and the whole watchlist is polled in a
-> *single* call per cycle. Set `twitter.provider: official` to use the official
-> X API v2 instead.
+> **推特 provider。** 默认是 `rapidapi`——在 RapidAPI 上订阅一个 Twitter API,复制 `x-rapidapi-key`,整份名单每轮一次调用就拉完。想用官方 X API v2,把 `twitter.provider` 设成 `official` 即可。
 
-## Install
+## 安装
 
 ```bash
 git clone https://github.com/cccyd2003-qwq/x-growth-agent
@@ -73,103 +60,88 @@ cd x-growth-agent
 pip install -e .
 ```
 
-## Quickstart
+## 快速上手
 
 ```bash
-xgrowth init                       # create ~/.xgrowth/config.yaml + db
-# edit ~/.xgrowth/config.yaml: add twitter.rapidapi_key and notify.telegram.bot_token
+xgrowth init                       # 生成 ~/.xgrowth/config.yaml + 数据库
+# 编辑 ~/.xgrowth/config.yaml:填入 twitter.rapidapi_key 和 notify.telegram.bot_token
 
-xgrowth test-notify                # confirms Telegram, auto-detects your chat_id
-xgrowth add naval                  # watch an account
-xgrowth import-following yourhandle --min-followers 10000   # or bulk-pick from who you follow
-xgrowth doctor                     # sanity-check everything
+xgrowth test-notify                # 验证 Telegram,自动抓取你的 chat_id
+xgrowth add naval                  # 监控一个账号
+xgrowth import-following 你的handle --min-followers 10000   # 或从你的关注里批量勾选
+xgrowth doctor                     # 体检:配置/密钥/引擎/通知
 
-xgrowth start                      # run the agent (poll loop + Telegram + local panel)
+xgrowth start                      # 启动 agent(轮询 + Telegram + 本地面板)
 ```
 
-Open the local panel at **http://127.0.0.1:7777** to manage the watchlist and
-review recent drafts in a browser.
+打开本地面板 **http://127.0.0.1:7777**,在浏览器里管理监控名单、回看最近的草稿。
 
-### Try a draft right now (no polling)
+### 现在就试一条草稿(不轮询)
 
 ```bash
 xgrowth draft "the most important skill of the next decade is learning to learn" --from naval
 ```
 
-## Commands
+## 命令
 
-| Command | Does |
+| 命令 | 作用 |
 | --- | --- |
-| `xgrowth init` | Create config + database |
-| `xgrowth add <handle>` | Add an account to the watchlist |
-| `xgrowth rm <handle>` | Remove an account |
-| `xgrowth list` | Show the watchlist |
-| `xgrowth import-following <handle>` | Pull who you follow, pick a subset to watch |
-| `xgrowth once` | Run one poll cycle and exit (good for cron) |
-| `xgrowth start` | Run the full agent (loop + Telegram listener + panel) |
-| `xgrowth panel` | Run only the local web panel |
-| `xgrowth draft "<text>"` | Draft replies for a pasted tweet |
-| `xgrowth test-notify` | Send a test notification |
-| `xgrowth doctor` | Check config / keys / engine / notifier |
+| `xgrowth init` | 创建配置 + 数据库 |
+| `xgrowth add <handle>` | 把一个账号加入监控名单 |
+| `xgrowth rm <handle>` | 移除一个账号 |
+| `xgrowth list` | 查看监控名单 |
+| `xgrowth import-following <handle>` | 拉取你的关注,挑一部分来监控 |
+| `xgrowth once` | 跑一轮就退出(适合 cron) |
+| `xgrowth start` | 启动完整 agent(轮询 + Telegram 监听 + 面板) |
+| `xgrowth panel` | 只启动本地网页面板 |
+| `xgrowth draft "<文本>"` | 给粘贴进来的推文起草回复 |
+| `xgrowth test-notify` | 发一条测试通知 |
+| `xgrowth doctor` | 检查配置/密钥/引擎/通知 |
 
-## Configuration
+## 配置
 
-Lives at `~/.xgrowth/config.yaml` (override the dir with `XGROWTH_HOME`). See
-[`config.example.yaml`](config.example.yaml) for every option. Highlights:
+配置在 `~/.xgrowth/config.yaml`(可用 `XGROWTH_HOME` 改目录)。全部选项见 [`config.example.yaml`](config.example.yaml)。要点:
 
-- `engine.provider` — `claude` or `codex`; `engine.model` — default `claude-opus-4-8`
-- `engine.styles` — the reply styles to rotate (`神补刀`, `反直觉`, …)
-- `poll.interval_minutes` — default 120; `poll.active_start_hour` / `active_end_hour` /
-  `timezone_offset` — the daily polling window (default Beijing 12:00–02:00)
-- `notify.provider` — `telegram` (full: digest + drill-in + conversational revise),
-  `lark` / `bark` (stubs)
+- `engine.provider` —— `claude` 或 `codex`;`engine.model` —— 默认 `claude-opus-4-8`
+- `engine.styles` —— 轮换的回复风格(`神补刀`、`反直觉`…)
+- `poll.interval_minutes` —— 默认 120;`poll.active_start_hour` / `active_end_hour` / `timezone_offset` —— 每天的轮询时间窗(默认北京 12:00–02:00)
+- `notify.provider` —— `telegram`(完整:合并消息 + 钻入 + 对话改写),`lark` / `bark`(桩)
 
-Secrets can also come from env vars: `XGROWTH_RAPIDAPI_KEY`, `XGROWTH_TELEGRAM_TOKEN`,
-`XGROWTH_TELEGRAM_CHAT`.
+密钥也可以走环境变量:`XGROWTH_RAPIDAPI_KEY`、`XGROWTH_TELEGRAM_TOKEN`、`XGROWTH_TELEGRAM_CHAT`。
 
-## Telegram setup (60 seconds)
+## Telegram 配置(60 秒)
 
-1. In Telegram, open **@BotFather**, send `/newbot`, follow the prompts, copy the **token**.
-2. Put it in `notify.telegram.bot_token`.
-3. Send any message to your new bot.
-4. Run `xgrowth test-notify` — it finds and saves your `chat_id` automatically.
+1. 在 Telegram 里打开 **@BotFather**,发 `/newbot`,按提示走完,复制 **token**。
+2. 填进 `notify.telegram.bot_token`。
+3. 给你新建的机器人随便发一句话。
+4. 跑 `xgrowth test-notify` —— 它会自动找到并保存你的 `chat_id`。
 
-Each poll cycle sends **one digest message** listing every new post. Tap a post to
-open its full text + reply drafts, with native **copy buttons**, a **🔄 regenerate**
-button, and a link to the original. Don't like a draft? Just **reply to it** with an
-instruction and the brain rewrites it.
+每轮轮询发**一条合并消息**,列出所有新帖。点一条看它的全文 + 回复草稿,带原生**复制按钮**、**🔄 换一批**按钮、和原帖链接。对草稿不满意?直接**回复那条消息**给一句指令,大脑就重写。
 
-## Skills (for Claude Code / Codex)
+## Skills(给 Claude Code / Codex 用)
 
-Two skills in [`skills/`](skills/) make the agent conversational inside your coding agent:
+[`skills/`](skills/) 里有两个 skill,让 agent 在你的 coding agent 里能对话式操作:
 
-- **reply-craft** — co-write and sharpen replies by hand; grow the example library.
-- **watchlist** — import your following list and curate who to watch.
+- **reply-craft** —— 手动共创、打磨回复;扩充范例库。
+- **watchlist** —— 导入关注名单,挑选监控对象。
 
-The reply voice is defined once in `xgrowth/prompts.py` and seeded by
-[`examples/replies.jsonl`](examples/replies.jsonl) — add your favorite real replies
-there to make the engine sharper over time.
+回复的"语气"在 `xgrowth/prompts.py` 里统一定义,由 [`examples/replies.jsonl`](examples/replies.jsonl) 做 few-shot 种子——把你看到的神回复加进去,引擎会越来越对味。
 
-## Troubleshooting
+## 排错
 
-- **`claude exited 1: ... model may not exist or you may not have access`** — your
-  Claude Code default model isn't available in headless (`-p`) mode. Pin a known-good
-  one in config: `engine.model: claude-haiku-4-5` or a Sonnet/Opus id you have access to.
-- **Garbled output on Windows** — handled automatically; xgrowth forces UTF-8 stdout.
-- **`/following` errors on `import-following`** — some API tiers gate that endpoint;
-  add accounts manually with `xgrowth add` instead.
+- **`claude exited 1: ... model may not exist or you may not have access`** —— 你 Claude Code 的默认模型在无头(`-p`)模式下不可用。在配置里指定一个可用的:`engine.model: claude-haiku-4-5` 或你有权限的 Sonnet/Opus id。
+- **Windows 上输出乱码** —— 已自动处理;xgrowth 会强制 UTF-8 输出。
+- **`import-following` 报 `/following` 错** —— 某些 API 档位限制该端点;改用 `xgrowth add` 手动加号。
 
-## Roadmap
+## 路线图
 
-- **MVP (this repo):** CLI engine (claude + codex) · reply-craft & watchlist skills ·
-  Telegram digest + drill-in + conversational revise · local panel · time-windowed polling.
-- **Next:** richer panel, full 飞书/Bark notifiers, reply analytics, cloud deploy guide.
-- **Closed-source paid tier (separate):** hosted 24/7 cloud scheduling, web dashboard, managed keys.
+- **MVP(本仓库):** CLI 引擎(claude + codex)· reply-craft & watchlist 两个 skill · Telegram 合并消息 + 钻入 + 对话改写 · 本地面板 · 时间窗轮询。
+- **下一步:** 更丰富的面板、完整的飞书/Bark 通知、回复数据分析、云端部署指南。
+- **闭源付费版(独立):** 托管 7×24 云端调度、网页看板、代管密钥。
 
-## Design notes
+## 设计说明
 
-See [`docs/PRODUCT.md`](docs/PRODUCT.md) for the full product rationale, the
-open-source vs. paid split, and the architecture decisions behind this layout.
+完整的产品思路、开源 vs 付费的划分、以及这套架构背后的取舍,见 [`docs/PRODUCT.md`](docs/PRODUCT.md)。
 
 ## License
 
