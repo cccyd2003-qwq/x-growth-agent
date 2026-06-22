@@ -4,7 +4,7 @@
 
 # HypeX
 
-**go from 0 → 1 on X · Be a reply guy · .**
+**go from 0 → 1 on X · Be a reply guy.**
 
 An open-source X (Twitter) growth agent. Point it at a watchlist, and when someone
 posts, your *own* local Claude Code / Codex drafts 2–3 short, witty replies — then
