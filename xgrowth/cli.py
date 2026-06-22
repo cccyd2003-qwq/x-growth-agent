@@ -379,6 +379,83 @@ def doctor() -> None:
     console.print(table)
 
 
+@app.command()
+def schedule(
+    interval: Optional[int] = typer.Option(None, "--interval", help="Minutes between polls."),
+    start: Optional[int] = typer.Option(None, "--start", help="Daily window start hour (0-23)."),
+    end: Optional[int] = typer.Option(None, "--end", help="Daily window end hour (0-23; may wrap midnight)."),
+    tz: Optional[int] = typer.Option(None, "--tz", help="Timezone offset from UTC (e.g. 8 = Beijing)."),
+) -> None:
+    """Show or change the polling schedule (interval + daily time window)."""
+    cfg = cfgmod.load_config()
+    p = cfg["poll"]
+    changed = False
+    for key, val in (("interval_minutes", interval), ("active_start_hour", start),
+                     ("active_end_hour", end), ("timezone_offset", tz)):
+        if val is not None:
+            p[key] = int(val)
+            changed = True
+    if changed:
+        cfgmod.save_config(cfg)
+        console.print("[green]✓[/] schedule updated.")
+    console.print(
+        f"poll every [cyan]{p['interval_minutes']}[/] min · window "
+        f"[cyan]{int(p['active_start_hour']):02d}:00–{int(p['active_end_hour']):02d}:00[/] "
+        f"(UTC+{p['timezone_offset']})"
+    )
+    if not changed:
+        console.print("[dim]change it, e.g.:[/] xgrowth schedule --interval 60 --start 9 --end 23 --tz 8")
+
+
+@app.command()
+def setup() -> None:
+    """Guided first-time setup: keys, brain, Telegram, and schedule — no YAML editing."""
+    cfgmod.ensure_home()
+    cfg = cfgmod.load_config()
+    console.print("[bold]xgrowth setup[/]  ·  press Enter to keep the shown default.\n")
+
+    # --- Twitter ---
+    tw = cfg["twitter"]
+    tw["provider"] = typer.prompt("Twitter provider (rapidapi/official)",
+                                  default=tw.get("provider", "rapidapi"))
+    if tw["provider"] == "rapidapi":
+        v = typer.prompt("  RapidAPI key", default=tw.get("rapidapi_key", ""))
+        tw["rapidapi_key"] = v
+    else:
+        v = typer.prompt("  X API bearer token", default=tw.get("bearer_token", ""))
+        tw["bearer_token"] = v
+
+    # --- Brain ---
+    eng = cfg["engine"]
+    eng["provider"] = typer.prompt("Brain — coding agent (claude/codex)",
+                                   default=eng.get("provider", "claude"))
+    eng["model"] = typer.prompt("  Model (blank = the agent's default)",
+                                default=eng.get("model", "") or "")
+
+    # --- Telegram ---
+    tg = cfg["notify"]["telegram"]
+    tg["bot_token"] = typer.prompt("Telegram bot token (from @BotFather)",
+                                   default=tg.get("bot_token", ""))
+    cfg["notify"]["provider"] = "telegram"
+
+    # --- Schedule ---
+    p = cfg["poll"]
+    p["interval_minutes"] = int(typer.prompt("Poll every N minutes", default=p["interval_minutes"]))
+    p["active_start_hour"] = int(typer.prompt("Daily window START hour (0-23)", default=p["active_start_hour"]))
+    p["active_end_hour"] = int(typer.prompt("Daily window END hour (0-23, may wrap midnight)", default=p["active_end_hour"]))
+    p["timezone_offset"] = int(typer.prompt("Timezone offset from UTC (e.g. 8)", default=p["timezone_offset"]))
+
+    Store()  # make sure the database exists
+    path = cfgmod.save_config(cfg)
+    console.print(f"\n[green]✓ saved[/] → [cyan]{path}[/]")
+    console.print(
+        "next:\n"
+        "  [cyan]xgrowth test-notify[/]   confirm Telegram + grab your chat_id\n"
+        "  [cyan]xgrowth add <handle>[/]  watch an account (or import-following)\n"
+        "  [cyan]xgrowth start[/]         run the agent"
+    )
+
+
 def main() -> None:
     app()
 
