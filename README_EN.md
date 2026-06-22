@@ -70,16 +70,17 @@ You don't keep a chat window open.
 ## Install
 
 ```bash
-git clone https://github.com/cccyd2003-qwq/x-growth-agent
-cd x-growth-agent
-pip install -e .
+# recommended: install the CLI in isolation with pipx
+pipx install git+https://github.com/cccyd2003-qwq/x-growth-agent
+# or with pip:
+git clone https://github.com/cccyd2003-qwq/x-growth-agent && cd x-growth-agent && pip install -e .
 ```
 
 ## Quickstart
 
 ```bash
-xgrowth init                       # create ~/.xgrowth/config.yaml + db
-# edit ~/.xgrowth/config.yaml: add twitter.rapidapi_key and notify.telegram.bot_token
+xgrowth setup                      # guided wizard: keys, brain, Telegram, schedule in one go
+# (or manually: xgrowth init, then edit ~/.xgrowth/config.yaml)
 
 xgrowth test-notify                # confirms Telegram, auto-detects your chat_id
 xgrowth add naval                  # watch an account
@@ -102,7 +103,9 @@ xgrowth draft "the most important skill of the next decade is learning to learn"
 
 | Command | Does |
 | --- | --- |
+| `xgrowth setup` | Guided wizard: keys, brain, Telegram, schedule |
 | `xgrowth init` | Create config + database |
+| `xgrowth schedule` | Show/change the polling schedule (interval + daily window) |
 | `xgrowth add <handle>` | Add an account to the watchlist |
 | `xgrowth rm <handle>` | Remove an account |
 | `xgrowth list` | Show the watchlist |
