@@ -2,7 +2,7 @@
 
 <img src="docs/logo.png" alt="xgrowth" width="96" height="96">
 
-# xgrowth
+# HypeX
 
 **go from 0 → 1 on X: Be first to every post.**
 
