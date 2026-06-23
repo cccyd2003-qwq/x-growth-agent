@@ -68,12 +68,62 @@ CREATE TABLE IF NOT EXISTS tg_topics (
 """
 
 
+class _LockedConn:
+    """Serializes all access to one sqlite connection across threads.
+
+    The poll loop and the Telegram listener run in separate threads and share a
+    single connection; without this, interleaved cursors raise
+    'bad parameter or other API misuse'. execute() returns the fetched rows
+    eagerly (list) under the lock so callers can iterate safely afterwards.
+    """
+
+    def __init__(self, conn, lock):
+        self._conn = conn
+        self._lock = lock
+
+    def execute(self, sql, params=()):
+        with self._lock:
+            cur = self._conn.execute(sql, params)
+            rows = cur.fetchall() if cur.description else []
+            return _LockedCursor(cur.lastrowid, cur.rowcount, rows)
+
+    def executescript(self, script):
+        with self._lock:
+            return self._conn.executescript(script)
+
+    def commit(self):
+        with self._lock:
+            return self._conn.commit()
+
+    def close(self):
+        with self._lock:
+            return self._conn.close()
+
+
+class _LockedCursor:
+    def __init__(self, lastrowid, rowcount, rows):
+        self.lastrowid = lastrowid
+        self.rowcount = rowcount
+        self._rows = rows
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return self._rows
+
+
 class Store:
     def __init__(self, path: Optional[Path] = None):
+        import threading
+
         ensure_home()
         self.path = path or db_path()
-        self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
+        raw = sqlite3.connect(str(self.path), check_same_thread=False)
+        raw.row_factory = sqlite3.Row
+        # The poll loop and the Telegram listener share this connection across
+        # threads; serialize all access so cursors don't interleave.
+        self.conn = _LockedConn(raw, threading.RLock())
         self.conn.executescript(SCHEMA)
         self.conn.commit()
 
