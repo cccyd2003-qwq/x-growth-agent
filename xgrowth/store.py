@@ -261,3 +261,23 @@ class Store:
             "SELECT tweet_id FROM tg_topics WHERE thread_id = ?", (str(thread_id),)
         ).fetchone()
         return r["tweet_id"] if r else None
+
+    def thread_for_tweet(self, tweet_id: str) -> Optional[str]:
+        r = self.conn.execute(
+            "SELECT thread_id FROM tg_topics WHERE tweet_id = ?", (str(tweet_id),)
+        ).fetchone()
+        return r["thread_id"] if r else None
+
+    def unmap_topic(self, thread_id: str) -> None:
+        self.conn.execute("DELETE FROM tg_topics WHERE thread_id = ?", (str(thread_id),))
+        self.conn.commit()
+
+    def topics_older_than(self, hours: int) -> list[str]:
+        """thread_ids created more than `hours` ago (for daily cleanup)."""
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        rows = self.conn.execute(
+            "SELECT thread_id FROM tg_topics WHERE created_at < ?", (cutoff,)
+        ).fetchall()
+        return [r["thread_id"] for r in rows]

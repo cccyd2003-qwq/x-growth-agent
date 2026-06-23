@@ -73,10 +73,12 @@ class TelegramNotifier(Notifier):
     def _circle(i: int) -> str:
         return CIRCLED[i] if i < len(CIRCLED) else f"({i + 1})"
 
-    def _format(self, post: Post, candidates: list[Candidate]) -> str:
+    def _format(self, post: Post, candidates: list[Candidate], note: str = "") -> str:
         age = human_age(post.created_at)
         head = f"🐦 <b>@{html.escape(post.username)}</b>" + (f" · {age}" if age else "")
         lines = [head]
+        if note:
+            lines.append(f"↪️ <i>按你说的「{html.escape(note)}」重写：</i>")
         lines.append(f"<i>{html.escape(post.text)}</i>")
         lines.append("─────────────")
         for i, c in enumerate(candidates):
@@ -98,21 +100,33 @@ class TelegramNotifier(Notifier):
             )
         # Telegram allows max 8 buttons per row; chunk the copy buttons.
         rows = [copy_row[j : j + 4] for j in range(0, len(copy_row), 4)]
-        rows.append(
-            [
-                {"text": "🔄 换一批", "callback_data": f"regen:{post.tweet_id}"},
-                {"text": "🔗 看原帖", "url": post.url},
-            ]
-        )
+        # No "换一批" button — revise by replying with an instruction instead.
+        last = [{"text": "🔗 看原帖", "url": post.url}]
+        if self.mode == "forum":
+            last.append({"text": "🗑 删除话题", "callback_data": f"del:{post.tweet_id}"})
+        rows.append(last)
         return {"inline_keyboard": rows}
 
+    # ---- forum topic deep link & management ----------------------------
+    def topic_link(self, thread_id: int) -> Optional[str]:
+        cid = self.chat_id
+        if cid.startswith("-100"):
+            return f"https://t.me/c/{cid[4:]}/{int(thread_id)}"
+        return None
+
+    def delete_topic(self, thread_id: int) -> None:
+        try:
+            self._call("deleteForumTopic", {"chat_id": self.chat_id, "message_thread_id": int(thread_id)})
+        except NotifierError:
+            pass
+
     # ---- Notifier API --------------------------------------------------
-    def send(self, post: Post, candidates: list[Candidate]) -> Optional[str]:
+    def send(self, post: Post, candidates: list[Candidate], note: str = "") -> Optional[str]:
         result = self._call(
             "sendMessage",
             {
                 "chat_id": self.chat_id,
-                "text": self._format(post, candidates),
+                "text": self._format(post, candidates, note=note),
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
                 "reply_markup": self._keyboard(post, candidates),
@@ -187,13 +201,15 @@ class TelegramNotifier(Notifier):
         tid = result.get("message_thread_id")
         return int(tid) if tid is not None else None
 
-    def send_to_topic(self, thread_id: int, post: Post, candidates: list[Candidate]) -> Optional[str]:
+    def send_to_topic(
+        self, thread_id: int, post: Post, candidates: list[Candidate], note: str = ""
+    ) -> Optional[str]:
         result = self._call(
             "sendMessage",
             {
                 "chat_id": self.chat_id,
                 "message_thread_id": int(thread_id),
-                "text": self._format(post, candidates),
+                "text": self._format(post, candidates, note=note),
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
                 "reply_markup": self._keyboard(post, candidates),
@@ -207,33 +223,35 @@ class TelegramNotifier(Notifier):
         except NotifierError:
             pass
 
-    def deliver(self, items: list[dict]) -> list[dict]:
-        """Deliver a poll cycle. Returns mappings the orchestrator should persist.
-
-        forum mode → one Topic per post (each a dedicated window); returns
-        [{tweet_id, thread_id, message_id}, ...].
-        dm mode → a single digest message; returns [].
+    def send_index(self, posts: list[Post]) -> Optional[str]:
+        """forum mode: one index message in General. One button per post — tapping
+        it lazily creates that post's topic and drafts replies (callback open:<id>).
         """
-        if self.mode != "forum":
-            self.send_digest(items)
-            return []
-        out = []
-        for it in items:
-            post: Post = it["post"]
-            cands = it["candidates"]
-            try:
-                tid = self.create_topic(self._topic_name(post))
-                if tid is None:
-                    self.send(post, cands)  # fallback to a plain message
-                    continue
-                mid = self.send_to_topic(tid, post, cands)
-                out.append({"tweet_id": post.tweet_id, "thread_id": tid, "message_id": mid})
-            except NotifierError:
-                try:
-                    self.send(post, cands)
-                except NotifierError:
-                    pass
-        return out
+        posts = posts[:MAX_DIGEST_ITEMS]
+        now = datetime.now(CST).strftime("%H:%M")
+        lines = [f"🗂 <b>本轮 {len(posts)} 条新帖</b> · {now}（北京时间）"]
+        buttons = []
+        for i, post in enumerate(posts):
+            c = self._circle(i)
+            age = human_age(post.created_at)
+            agetxt = f" · {age}" if age else ""
+            if i < 30:
+                snippet = html.escape(truncate(post.text, 70))
+                lines.append(f"\n{c} <b>@{html.escape(post.username)}</b>{agetxt}\n{snippet}")
+            buttons.append({"text": f"{c} @{post.username[:14]}", "callback_data": f"open:{post.tweet_id}"})
+        lines.append("\n\n👇 点一条 → 才为它建话题并写回复")
+        rows = [buttons[j : j + 2] for j in range(0, len(buttons), 2)]
+        result = self._call(
+            "sendMessage",
+            {
+                "chat_id": self.chat_id,
+                "text": "\n".join(lines),
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+                "reply_markup": {"inline_keyboard": rows},
+            },
+        )
+        return str(result.get("message_id", "")) or None
 
     # ---- listener helpers (used by poller.TelegramListener) ------------
     def get_updates(self, offset: int = 0, timeout: int = 25) -> list[dict]:

@@ -59,9 +59,22 @@ def run_once(cfg: dict, store: Store, twitter, orch: Orchestrator) -> int:
 
     if not new_posts:
         return 0
-    # Newest first in the digest.
+    # Newest first.
     new_posts.sort(key=lambda p: p.tweet_id, reverse=True)
+    # Cap per cycle so a backlog (or a very active watchlist) can't flood you.
+    cap = int(poll.get("max_per_cycle", 8))
+    dropped = 0
+    if cap > 0 and len(new_posts) > cap:
+        dropped = len(new_posts) - cap
+        new_posts = new_posts[:cap]
     orch.handle_cycle(new_posts)
+    if dropped:
+        log.info("capped cycle: handled %s, skipped %s older new post(s)", len(new_posts), dropped)
+        try:
+            if orch.notifier.configured():
+                orch.notifier.send_text(f"⚠️ 本轮新帖较多,已处理最新 {len(new_posts)} 条,跳过 {dropped} 条较旧的。")
+        except Exception:
+            pass
     return len(new_posts)
 
 
@@ -126,26 +139,44 @@ class TelegramListener(threading.Thread):
 
         if data.startswith("open:"):
             tid = data.split(":", 1)[1]
-            self.notifier.answer_callback(cb_id)
-            row = self.store.get_candidate_row(tid)
-            if not row:
+            forum = getattr(self.notifier, "mode", "dm") == "forum"
+            # Forum mode: if this post already has a topic, just point the user to it.
+            existing = self.store.thread_for_tweet(tid) if forum else None
+            if existing and hasattr(self.notifier, "topic_link"):
+                link = self.notifier.topic_link(int(existing))
+                self.notifier.answer_callback(cb_id, "已为这条建过话题")
+                if link:
+                    self.notifier.send_text(f"↑ 这条已有话题：{link}")
                 return
-            mid = self.notifier.send(row["post"], row["candidates"])
+            self.notifier.answer_callback(cb_id, "正在生成回复…")
+            result = self.orch.open_post(tid)  # lazy draft on first open
+            if not result:
+                return
+            post, cands = result
+            if forum and hasattr(self.notifier, "create_topic"):
+                tid_thread = self.notifier.create_topic(self.notifier._topic_name(post))
+                if tid_thread is not None:
+                    self.store.map_topic(str(tid_thread), tid)
+                    mid = self.notifier.send_to_topic(tid_thread, post, cands)
+                    if mid:
+                        self.store.map_message(str(mid), tid)
+                    link = self.notifier.topic_link(tid_thread)
+                    if link:
+                        self.notifier.send_text(f"✅ 已建话题：{link}")
+                    return
+            # dm fallback
+            mid = self.notifier.send(post, cands)
             if mid:
-                self.store.map_message(mid, tid)
+                self.store.map_message(str(mid), tid)
             self.store.set_meta("active_tweet", tid)
 
-        elif data.startswith("regen:"):
+        elif data.startswith("del:"):
             tid = data.split(":", 1)[1]
-            self.notifier.answer_callback(cb_id, "重新生成中…")
-            result = self.orch.regenerate(tid)
-            if result:
-                post, cands = result
-                message_id = msg.get("message_id")
-                if message_id and hasattr(self.notifier, "edit"):
-                    self.notifier.edit(str(message_id), post, cands)
-                    self.store.map_message(str(message_id), tid)
-                self.store.set_meta("active_tweet", tid)
+            self.notifier.answer_callback(cb_id, "已删除话题")
+            thread = msg.get("message_thread_id") or self.store.thread_for_tweet(tid)
+            if thread is not None and hasattr(self.notifier, "delete_topic"):
+                self.notifier.delete_topic(int(thread))
+                self.store.unmap_topic(str(thread))
         else:
             self.notifier.answer_callback(cb_id)
 
@@ -175,9 +206,9 @@ class TelegramListener(threading.Thread):
             return
         post, cands = result
         if thread is not None and hasattr(self.notifier, "send_to_topic"):
-            mid = self.notifier.send_to_topic(int(thread), post, cands)
+            mid = self.notifier.send_to_topic(int(thread), post, cands, note=text)
         else:
-            mid = self.notifier.send(post, cands)
+            mid = self.notifier.send(post, cands, note=text)
             self.store.set_meta("active_tweet", tid)
         if mid:
             self.store.map_message(mid, tid)
@@ -208,6 +239,37 @@ def _interval_seconds(cfg: dict) -> float:
     if poll.get("jitter", True):
         base += random.uniform(-0.05, 0.05) * base
     return base
+
+
+def _cleanup_old_topics(cfg: dict, store: Store, notifier) -> None:
+    """Delete forum topics older than `topic_ttl_hours` (default 24h ≈ yesterday's).
+
+    Runs at most once per hour. No-op unless notifier is in forum mode.
+    """
+    if getattr(notifier, "mode", "dm") != "forum" or not hasattr(notifier, "delete_topic"):
+        return
+    ttl = int(cfg.get("poll", {}).get("topic_ttl_hours", 24))
+    if ttl <= 0:
+        return
+    last = store.get_meta("last_topic_cleanup", "")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        if last:
+            last_dt = datetime.fromisoformat(last)
+            if (datetime.now(timezone.utc) - last_dt).total_seconds() < 3600:
+                return
+    except Exception:
+        pass
+    store.set_meta("last_topic_cleanup", now_iso)
+    old = store.topics_older_than(ttl)
+    for thread_id in old:
+        try:
+            notifier.delete_topic(int(thread_id))
+        except Exception:
+            pass
+        store.unmap_topic(str(thread_id))
+    if old:
+        log.info("cleaned up %s topic(s) older than %sh", len(old), ttl)
 
 
 def _sleep(seconds: float, stop_event: threading.Event) -> None:
@@ -245,6 +307,7 @@ def run_loop(
     try:
         while not stop_event.is_set():
             now = datetime.now(tz)
+            _cleanup_old_topics(cfg, store, notifier)
             if _in_window(now.hour, start, end):
                 try:
                     n = run_once(cfg, store, twitter, orch)

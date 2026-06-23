@@ -32,6 +32,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "active_start_hour": 12,     # 12:00 noon
         "active_end_hour": 2,        # until 02:00 next day
         "max_per_account": 5,
+        # Hard cap on how many new posts to handle per cycle, so a backlog or a
+        # very active watchlist can't flood you with topics. Older overflow is skipped.
+        "max_per_cycle": 8,
+        # forum mode: auto-delete topics older than this many hours (daily cleanup).
+        "topic_ttl_hours": 24,
         "exclude_replies": True,
         "exclude_retweets": True,
     },

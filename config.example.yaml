@@ -27,6 +27,12 @@ poll:
   active_end_hour: 2       # stop at 02:00 the next morning
   # Max new tweets to process per account per cycle (keeps API spend bounded).
   max_per_account: 5
+  # Hard cap on total new posts handled per cycle (prevents topic/notification
+  # floods from a backlog or a very active watchlist). Older overflow is skipped.
+  max_per_cycle: 8
+  # forum mode only: auto-delete topics older than this many hours (≈ clear out
+  # yesterday's topics each day). Set 0 to keep topics forever.
+  topic_ttl_hours: 24
   # Skip retweets / replies — usually you only want original posts.
   exclude_replies: true
   exclude_retweets: true

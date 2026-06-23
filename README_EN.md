@@ -139,10 +139,20 @@ Secrets can also come from env vars: `XGROWTH_RAPIDAPI_KEY`, `XGROWTH_TELEGRAM_T
 3. Send any message to your new bot.
 4. Run `xgrowth test-notify` — it finds and saves your `chat_id` automatically.
 
-Each poll cycle sends **one digest message** listing every new post. Tap a post to
-open its full text + reply drafts, with native **copy buttons**, a **🔄 regenerate**
-button, and a link to the original. Don't like a draft? Just **reply to it** with an
-instruction and the brain rewrites it.
+**Two delivery modes** (`notify.telegram.mode`):
+
+- **`dm` (default)** — each cycle sends **one digest message** to your private chat,
+  listing every new post.
+- **`forum` (recommended)** — add the bot to a group with **Topics enabled**, make it
+  an admin with **Manage Topics**. Each cycle posts **one index message** with a button
+  per new post; **tapping a post is what creates its Topic and drafts the replies** —
+  posts you don't tap cost nothing. The button jumps you into that post's **dedicated
+  thread**, where you just type an instruction (`punchier`, `shorter`) to have it
+  rewritten **based on what you said**. Each topic has a **🗑 delete** button, and
+  yesterday's topics are **auto-cleaned daily** (`poll.topic_ttl_hours`, default 24h).
+
+Both modes handle at most **8 new posts per cycle** by default (`poll.max_per_cycle`)
+so a backlog can't flood you.
 
 ## Skills (for Claude Code / Codex)
 

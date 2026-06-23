@@ -48,10 +48,26 @@ class Orchestrator:
         return candidates
 
     def handle_cycle(self, posts: list[Post], notify: bool = True) -> list[dict]:
-        """Draft replies for every new post in a poll cycle, then send ONE digest.
+        """Handle a poll cycle.
 
-        Returns the list of {post, candidates} items handled.
+        forum mode (lazy): stage the posts (NO drafting), send one index message
+        with a button per post. Drafting + topic creation happen only when the
+        user taps a post (see open_post). Saves cost and avoids topic floods.
+
+        dm mode: draft every post now and send one digest.
         """
+        is_forum = getattr(self.notifier, "mode", "dm") == "forum"
+        if is_forum and hasattr(self.notifier, "send_index"):
+            for post in posts:
+                self.store.save_candidates(post, [])  # stage post, no candidates yet
+            if notify and self.notifier.configured():
+                try:
+                    self.notifier.send_index(posts)
+                except Exception as e:
+                    log.error("index notify failed: %s", e)
+            return [{"post": p, "candidates": []} for p in posts]
+
+        # dm mode: draft everything now
         items: list[dict] = []
         for post in posts:
             try:
@@ -63,18 +79,26 @@ class Orchestrator:
                 log.error("draft failed for %s: %s", post.tweet_id, e)
         if items and notify and self.notifier.configured():
             try:
-                mappings = self.notifier.deliver(items) or []
-                for m in mappings:
-                    tid = m.get("tweet_id")
-                    if not tid:
-                        continue
-                    if m.get("thread_id") is not None:
-                        self.store.map_topic(str(m["thread_id"]), tid)
-                    if m.get("message_id"):
-                        self.store.map_message(str(m["message_id"]), tid)
+                self.notifier.deliver(items)
             except Exception as e:
                 log.error("notify failed: %s", e)
         return items
+
+    def open_post(self, tweet_id: str):
+        """Lazy: draft replies for a staged post the first time it's opened.
+
+        Returns (post, candidates) or None. Reuses existing candidates if already drafted.
+        """
+        row = self.store.get_candidate_row(tweet_id)
+        if not row:
+            return None
+        post: Post = row["post"]
+        candidates = row["candidates"]
+        if not candidates:
+            log.info("drafting (on open) @%s tweet %s", post.username, post.tweet_id)
+            candidates = self.draft(post)
+            self.store.update_candidates(tweet_id, candidates)
+        return post, candidates
 
     def regenerate(
         self, tweet_id: str, instruction: Optional[str] = None
