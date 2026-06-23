@@ -155,22 +155,32 @@ class TelegramListener(threading.Thread):
             return
         # Which post is this steer about?
         tid = None
-        reply = msg.get("reply_to_message")
-        if reply:
-            tid = self.store.tweet_for_message(str(reply.get("message_id")))
+        thread = msg.get("message_thread_id")
+        # forum mode: the Topic IS the post
+        if thread is not None:
+            tid = self.store.tweet_for_topic(str(thread))
+        # reply-to a specific draft message
+        if not tid:
+            reply = msg.get("reply_to_message")
+            if reply:
+                tid = self.store.tweet_for_message(str(reply.get("message_id")))
+        # DM fallback: the last opened post
         if not tid:
             tid = self.store.get_meta("active_tweet", "") or None
         if not tid:
-            self.notifier.send_text("先点开一条帖子（或回复某条详情消息），再告诉我怎么改～")
+            self.notifier.send_text("先点开一条帖子（或在它的话题里）再告诉我怎么改～")
             return
         result = self.orch.regenerate(tid, instruction=text)
         if not result:
             return
         post, cands = result
-        mid = self.notifier.send(post, cands)
+        if thread is not None and hasattr(self.notifier, "send_to_topic"):
+            mid = self.notifier.send_to_topic(int(thread), post, cands)
+        else:
+            mid = self.notifier.send(post, cands)
+            self.store.set_meta("active_tweet", tid)
         if mid:
             self.store.map_message(mid, tid)
-        self.store.set_meta("active_tweet", tid)
 
 
 # ---------------------------------------------------------------------------

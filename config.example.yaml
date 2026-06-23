@@ -53,11 +53,16 @@ engine:
 notify:
   # Which notifier to use: telegram | lark | bark
   provider: telegram
-  telegram:
+    # Delivery mode:
+    #   dm    — one digest message per cycle in your private chat with the bot
+    #   forum — one Telegram Topic per new post, in a forum supergroup (each post
+    #           gets its own dedicated thread/window; reply in the topic to revise)
+    mode: dm
     # From @BotFather: send /newbot, copy the token here.
     bot_token: ""
-    # Your chat id. Run `xgrowth test-notify` after setting bot_token and it
-    # will tell you how to capture this if it's empty.
+    # Your chat id. In dm mode: your private chat id (run `xgrowth test-notify`
+    # to auto-detect). In forum mode: the supergroup's id (a negative number like
+    # -100123...). Add the bot to the group as an admin with "Manage Topics".
     chat_id: ""
   lark:
     webhook_url: ""      # 飞书自定义机器人 webhook (stub)

@@ -13,7 +13,9 @@ def build_notifier(cfg: dict) -> Notifier:
     provider = (nc.get("provider") or "telegram").lower()
     if provider == "telegram":
         tg = nc.get("telegram", {})
-        return TelegramNotifier(tg.get("bot_token", ""), tg.get("chat_id", ""))
+        return TelegramNotifier(
+            tg.get("bot_token", ""), tg.get("chat_id", ""), mode=tg.get("mode", "dm")
+        )
     if provider == "lark":
         return LarkNotifier(nc.get("lark", {}).get("webhook_url", ""))
     if provider == "bark":

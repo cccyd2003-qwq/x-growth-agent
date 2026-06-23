@@ -46,7 +46,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "notify": {
         "provider": "telegram",
-        "telegram": {"bot_token": "", "chat_id": ""},
+        "telegram": {"bot_token": "", "chat_id": "", "mode": "dm"},
         "lark": {"webhook_url": ""},
         "bark": {"server": "https://api.day.app", "device_key": ""},
     },

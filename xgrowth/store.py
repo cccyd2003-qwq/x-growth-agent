@@ -57,6 +57,14 @@ CREATE TABLE IF NOT EXISTS tg_messages (
     tweet_id   TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+-- Maps a Telegram forum Topic (message_thread_id) to the tweet it's about, so a
+-- reply anywhere in that topic routes to the right post (forum mode).
+CREATE TABLE IF NOT EXISTS tg_topics (
+    thread_id  TEXT PRIMARY KEY,
+    tweet_id   TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
 """
 
 
@@ -237,5 +245,19 @@ class Store:
     def tweet_for_message(self, message_id: str) -> Optional[str]:
         r = self.conn.execute(
             "SELECT tweet_id FROM tg_messages WHERE message_id = ?", (str(message_id),)
+        ).fetchone()
+        return r["tweet_id"] if r else None
+
+    def map_topic(self, thread_id: str, tweet_id: str) -> None:
+        self.conn.execute(
+            "INSERT INTO tg_topics (thread_id, tweet_id, created_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(thread_id) DO UPDATE SET tweet_id=excluded.tweet_id",
+            (str(thread_id), str(tweet_id), _now()),
+        )
+        self.conn.commit()
+
+    def tweet_for_topic(self, thread_id: str) -> Optional[str]:
+        r = self.conn.execute(
+            "SELECT tweet_id FROM tg_topics WHERE thread_id = ?", (str(thread_id),)
         ).fetchone()
         return r["tweet_id"] if r else None

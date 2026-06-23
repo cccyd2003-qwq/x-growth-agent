@@ -33,5 +33,13 @@ class Notifier:
             last = self.send(it["post"], it["candidates"])
         return last
 
+    def deliver(self, items: list[dict]) -> list[dict]:
+        """Deliver a poll cycle. Returns mappings (tweet_id/thread_id/message_id)
+        the orchestrator should persist. Default: a digest, no mappings.
+        Telegram overrides this to support forum-Topic-per-post mode.
+        """
+        self.send_digest(items)
+        return []
+
     def configured(self) -> bool:
         return True

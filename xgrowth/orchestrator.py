@@ -63,9 +63,17 @@ class Orchestrator:
                 log.error("draft failed for %s: %s", post.tweet_id, e)
         if items and notify and self.notifier.configured():
             try:
-                self.notifier.send_digest(items)
+                mappings = self.notifier.deliver(items) or []
+                for m in mappings:
+                    tid = m.get("tweet_id")
+                    if not tid:
+                        continue
+                    if m.get("thread_id") is not None:
+                        self.store.map_topic(str(m["thread_id"]), tid)
+                    if m.get("message_id"):
+                        self.store.map_message(str(m["message_id"]), tid)
             except Exception as e:
-                log.error("digest notify failed: %s", e)
+                log.error("notify failed: %s", e)
         return items
 
     def regenerate(

@@ -44,9 +44,12 @@ MAX_DIGEST_ITEMS = 90  # Telegram inline-keyboard button ceiling guard
 class TelegramNotifier(Notifier):
     name = "telegram"
 
-    def __init__(self, bot_token: str, chat_id: str, timeout: float = 20.0):
+    def __init__(self, bot_token: str, chat_id: str, mode: str = "dm", timeout: float = 20.0):
         self.bot_token = bot_token or ""
         self.chat_id = str(chat_id or "")
+        # mode: "dm" (one digest per cycle in a private chat) |
+        #       "forum" (one Telegram Topic per post, in a forum supergroup)
+        self.mode = (mode or "dm").lower()
         self._timeout = timeout
 
     def configured(self) -> bool:
@@ -172,6 +175,65 @@ class TelegramNotifier(Notifier):
             },
         )
         return str(result.get("message_id", "")) or None
+
+    # ---- forum Topics (one post = one dedicated thread/window) ---------
+    def _topic_name(self, post: Post) -> str:
+        age = human_age(post.created_at)
+        name = f"@{post.username}" + (f" · {age}" if age else "")
+        return name[:128]  # Telegram topic name cap
+
+    def create_topic(self, name: str) -> Optional[int]:
+        result = self._call("createForumTopic", {"chat_id": self.chat_id, "name": name[:128]})
+        tid = result.get("message_thread_id")
+        return int(tid) if tid is not None else None
+
+    def send_to_topic(self, thread_id: int, post: Post, candidates: list[Candidate]) -> Optional[str]:
+        result = self._call(
+            "sendMessage",
+            {
+                "chat_id": self.chat_id,
+                "message_thread_id": int(thread_id),
+                "text": self._format(post, candidates),
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+                "reply_markup": self._keyboard(post, candidates),
+            },
+        )
+        return str(result.get("message_id", "")) or None
+
+    def close_topic(self, thread_id: int) -> None:
+        try:
+            self._call("closeForumTopic", {"chat_id": self.chat_id, "message_thread_id": int(thread_id)})
+        except NotifierError:
+            pass
+
+    def deliver(self, items: list[dict]) -> list[dict]:
+        """Deliver a poll cycle. Returns mappings the orchestrator should persist.
+
+        forum mode → one Topic per post (each a dedicated window); returns
+        [{tweet_id, thread_id, message_id}, ...].
+        dm mode → a single digest message; returns [].
+        """
+        if self.mode != "forum":
+            self.send_digest(items)
+            return []
+        out = []
+        for it in items:
+            post: Post = it["post"]
+            cands = it["candidates"]
+            try:
+                tid = self.create_topic(self._topic_name(post))
+                if tid is None:
+                    self.send(post, cands)  # fallback to a plain message
+                    continue
+                mid = self.send_to_topic(tid, post, cands)
+                out.append({"tweet_id": post.tweet_id, "thread_id": tid, "message_id": mid})
+            except NotifierError:
+                try:
+                    self.send(post, cands)
+                except NotifierError:
+                    pass
+        return out
 
     # ---- listener helpers (used by poller.TelegramListener) ------------
     def get_updates(self, offset: int = 0, timeout: int = 25) -> list[dict]:
