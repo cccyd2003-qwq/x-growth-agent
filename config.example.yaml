@@ -30,9 +30,10 @@ poll:
   # Hard cap on total new posts handled per cycle (prevents topic/notification
   # floods from a backlog or a very active watchlist). Older overflow is skipped.
   max_per_cycle: 8
-  # forum mode only: auto-delete topics older than this many hours (≈ clear out
-  # yesterday's topics each day). Set 0 to keep topics forever.
-  topic_ttl_hours: 24
+  # forum mode only: at the first cycle of each new local day, wipe ALL of the
+  # previous day's topics before today's posts arrive. (Topics live for the day
+  # they're created, not a per-topic 24h timer.) Set false to keep topics.
+  daily_topic_reset: true
   # Skip retweets / replies — usually you only want original posts.
   exclude_replies: true
   exclude_retweets: true

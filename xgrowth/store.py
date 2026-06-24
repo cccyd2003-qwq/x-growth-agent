@@ -322,8 +322,13 @@ class Store:
         self.conn.execute("DELETE FROM tg_topics WHERE thread_id = ?", (str(thread_id),))
         self.conn.commit()
 
+    def all_topics(self) -> list[str]:
+        """Every tracked forum topic thread_id."""
+        rows = self.conn.execute("SELECT thread_id FROM tg_topics").fetchall()
+        return [r["thread_id"] for r in rows]
+
     def topics_older_than(self, hours: int) -> list[str]:
-        """thread_ids created more than `hours` ago (for daily cleanup)."""
+        """thread_ids created more than `hours` ago."""
         from datetime import datetime, timedelta, timezone
 
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()

@@ -241,35 +241,29 @@ def _interval_seconds(cfg: dict) -> float:
     return base
 
 
-def _cleanup_old_topics(cfg: dict, store: Store, notifier) -> None:
-    """Delete forum topics older than `topic_ttl_hours` (default 24h ≈ yesterday's).
+def _daily_topic_reset(cfg: dict, store: Store, notifier, today: str) -> None:
+    """At the first cycle of a new local day, delete ALL existing topics.
 
-    Runs at most once per hour. No-op unless notifier is in forum mode.
+    i.e. before today's posts start arriving, clear out yesterday's. Topics live
+    only for the day they were created on — not a per-topic 24h timer.
     """
     if getattr(notifier, "mode", "dm") != "forum" or not hasattr(notifier, "delete_topic"):
         return
-    ttl = int(cfg.get("poll", {}).get("topic_ttl_hours", 24))
-    if ttl <= 0:
+    if not bool(cfg.get("poll", {}).get("daily_topic_reset", True)):
         return
-    last = store.get_meta("last_topic_cleanup", "")
-    now_iso = datetime.now(timezone.utc).isoformat()
-    try:
-        if last:
-            last_dt = datetime.fromisoformat(last)
-            if (datetime.now(timezone.utc) - last_dt).total_seconds() < 3600:
-                return
-    except Exception:
-        pass
-    store.set_meta("last_topic_cleanup", now_iso)
-    old = store.topics_older_than(ttl)
-    for thread_id in old:
+    last_day = store.get_meta("topics_day", "")
+    if last_day == today:
+        return  # already reset for today
+    topics = store.all_topics()
+    for thread_id in topics:
         try:
             notifier.delete_topic(int(thread_id))
         except Exception:
             pass
         store.unmap_topic(str(thread_id))
-    if old:
-        log.info("cleaned up %s topic(s) older than %sh", len(old), ttl)
+    store.set_meta("topics_day", today)
+    if topics:
+        log.info("new day %s: cleared %s topic(s) from the previous day", today, len(topics))
 
 
 def _sleep(seconds: float, stop_event: threading.Event) -> None:
@@ -307,7 +301,7 @@ def run_loop(
     try:
         while not stop_event.is_set():
             now = datetime.now(tz)
-            _cleanup_old_topics(cfg, store, notifier)
+            _daily_topic_reset(cfg, store, notifier, now.strftime("%Y-%m-%d"))
             if _in_window(now.hour, start, end):
                 try:
                     n = run_once(cfg, store, twitter, orch)

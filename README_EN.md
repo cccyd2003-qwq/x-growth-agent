@@ -149,7 +149,8 @@ Secrets can also come from env vars: `XGROWTH_RAPIDAPI_KEY`, `XGROWTH_TELEGRAM_T
   posts you don't tap cost nothing. The button jumps you into that post's **dedicated
   thread**, where you just type an instruction (`punchier`, `shorter`) to have it
   rewritten **based on what you said**. Each topic has a **🗑 delete** button, and
-  yesterday's topics are **auto-cleaned daily** (`poll.topic_ttl_hours`, default 24h).
+  at the start of each new day all of the previous day's topics are **wiped**
+  (`poll.daily_topic_reset`).
 
 Both modes handle at most **8 new posts per cycle** by default (`poll.max_per_cycle`)
 so a backlog can't flood you.

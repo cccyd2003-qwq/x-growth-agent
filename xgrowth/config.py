@@ -35,8 +35,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # Hard cap on how many new posts to handle per cycle, so a backlog or a
         # very active watchlist can't flood you with topics. Older overflow is skipped.
         "max_per_cycle": 8,
-        # forum mode: auto-delete topics older than this many hours (daily cleanup).
-        "topic_ttl_hours": 24,
+        # forum mode: at the first cycle of each new local day, delete ALL of the
+        # previous day's topics before today's posts arrive.
+        "daily_topic_reset": True,
         "exclude_replies": True,
         "exclude_retweets": True,
     },
