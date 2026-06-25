@@ -56,9 +56,9 @@
 
 ```bash
 # 推荐:用 pipx 隔离安装这个 CLI 工具
-pipx install git+https://github.com/cccyd2003-qwq/x-growth-agent
+pipx install git+https://github.com/cccyd2003-qwq/HypeX
 # 或者用 pip:
-git clone https://github.com/cccyd2003-qwq/x-growth-agent && cd x-growth-agent && pip install -e .
+git clone https://github.com/cccyd2003-qwq/HypeX && cd HypeX && pip install -e .
 ```
 
 ## 快速上手

@@ -71,9 +71,9 @@ You don't keep a chat window open.
 
 ```bash
 # recommended: install the CLI in isolation with pipx
-pipx install git+https://github.com/cccyd2003-qwq/x-growth-agent
+pipx install git+https://github.com/cccyd2003-qwq/HypeX
 # or with pip:
-git clone https://github.com/cccyd2003-qwq/x-growth-agent && cd x-growth-agent && pip install -e .
+git clone https://github.com/cccyd2003-qwq/HypeX && cd HypeX && pip install -e .
 ```
 
 ## Quickstart

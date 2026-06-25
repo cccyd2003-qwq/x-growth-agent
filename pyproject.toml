@@ -28,8 +28,8 @@ dev = ["pytest>=8.0", "ruff>=0.4"]
 xgrowth = "xgrowth.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/cccyd2003-qwq/x-growth-agent"
-Repository = "https://github.com/cccyd2003-qwq/x-growth-agent"
+Homepage = "https://github.com/cccyd2003-qwq/HypeX"
+Repository = "https://github.com/cccyd2003-qwq/HypeX"
 
 [tool.hatch.build.targets.wheel]
 packages = ["xgrowth"]
