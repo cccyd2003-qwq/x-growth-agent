@@ -32,6 +32,7 @@ from typing import Optional
 
 import httpx
 
+from ..i18n import normalize_lang, t
 from ..models import Candidate, Post
 from ..util import human_age, truncate
 from .base import Notifier, NotifierError
@@ -44,12 +45,15 @@ MAX_DIGEST_ITEMS = 90  # Telegram inline-keyboard button ceiling guard
 class TelegramNotifier(Notifier):
     name = "telegram"
 
-    def __init__(self, bot_token: str, chat_id: str, mode: str = "dm", timeout: float = 20.0):
+    def __init__(self, bot_token: str, chat_id: str, mode: str = "dm",
+                 lang: str = "en", tz_label: str = "", timeout: float = 20.0):
         self.bot_token = bot_token or ""
         self.chat_id = str(chat_id or "")
         # mode: "dm" (one digest per cycle in a private chat) |
         #       "forum" (one Telegram Topic per post, in a forum supergroup)
         self.mode = (mode or "dm").lower()
+        self.lang = normalize_lang(lang)
+        self.tz_label = tz_label  # e.g. "Beijing" — appended to the digest time
         self._timeout = timeout
 
     def configured(self) -> bool:
@@ -73,12 +77,16 @@ class TelegramNotifier(Notifier):
     def _circle(i: int) -> str:
         return CIRCLED[i] if i < len(CIRCLED) else f"({i + 1})"
 
+    def _now_label(self) -> str:
+        now = datetime.now(CST).strftime("%H:%M")
+        return f"{now} {self.tz_label}".strip()
+
     def _format(self, post: Post, candidates: list[Candidate], note: str = "") -> str:
-        age = human_age(post.created_at)
+        age = human_age(post.created_at, lang=self.lang)
         head = f"🐦 <b>@{html.escape(post.username)}</b>" + (f" · {age}" if age else "")
         lines = [head]
         if note:
-            lines.append(f"↪️ <i>按你说的「{html.escape(note)}」重写：</i>")
+            lines.append(t(self.lang, "revise_note", note=html.escape(note)))
         lines.append(f"<i>{html.escape(post.text)}</i>")
         lines.append("─────────────")
         for i, c in enumerate(candidates):
@@ -86,7 +94,7 @@ class TelegramNotifier(Notifier):
             lines.append(f"<b>{label}</b>")
             lines.append(html.escape(c.text))
             lines.append("")
-        lines.append("💬 <i>直接回复本条消息可让我改（例：更毒一点 / 更短 / 换个梗）</i>")
+        lines.append(t(self.lang, "reply_hint"))
         return "\n".join(lines).strip()
 
     def _keyboard(self, post: Post, candidates: list[Candidate]) -> dict:
@@ -94,16 +102,16 @@ class TelegramNotifier(Notifier):
         for i, c in enumerate(candidates):
             copy_row.append(
                 {
-                    "text": f"📋 复制{self._circle(i)}",
+                    "text": t(self.lang, "btn_copy", n=self._circle(i)),
                     "copy_text": {"text": c.text[:256]},  # Telegram caps copy_text at 256
                 }
             )
         # Telegram allows max 8 buttons per row; chunk the copy buttons.
         rows = [copy_row[j : j + 4] for j in range(0, len(copy_row), 4)]
-        # No "换一批" button — revise by replying with an instruction instead.
-        last = [{"text": "🔗 看原帖", "url": post.url}]
+        # No regenerate button — revise by replying with an instruction instead.
+        last = [{"text": t(self.lang, "btn_original"), "url": post.url}]
         if self.mode == "forum":
-            last.append({"text": "🗑 删除话题", "callback_data": f"del:{post.tweet_id}"})
+            last.append({"text": t(self.lang, "btn_delete_topic"), "callback_data": f"del:{post.tweet_id}"})
         rows.append(last)
         return {"inline_keyboard": rows}
 
@@ -162,21 +170,20 @@ class TelegramNotifier(Notifier):
         Each gets a button that drills into the full post + reply suggestions.
         """
         items = items[:MAX_DIGEST_ITEMS]
-        now = datetime.now(CST).strftime("%H:%M")
-        header = f"🗂 <b>本轮 {len(items)} 条新帖</b> · {now}（北京时间）"
+        header = t(self.lang, "digest_header", n=len(items), time=self._now_label())
         lines = [header]
         buttons = []
         for i, it in enumerate(items):
             post: Post = it["post"]
             c = self._circle(i)
-            age = human_age(post.created_at)
+            age = human_age(post.created_at, lang=self.lang)
             agetxt = f" · {age}" if age else ""
             if i < 30:  # keep the text body well under Telegram's 4096 cap
                 snippet = html.escape(truncate(post.text, 70))
                 lines.append(f"\n{c} <b>@{html.escape(post.username)}</b>{agetxt}\n{snippet}")
             uname = post.username[:14]
             buttons.append({"text": f"{c} @{uname}", "callback_data": f"open:{post.tweet_id}"})
-        lines.append("\n\n👇 点按钮看全文 + 回复建议")
+        lines.append(t(self.lang, "digest_tap"))
         rows = [buttons[j : j + 2] for j in range(0, len(buttons), 2)]
         result = self._call(
             "sendMessage",
@@ -192,7 +199,7 @@ class TelegramNotifier(Notifier):
 
     # ---- forum Topics (one post = one dedicated thread/window) ---------
     def _topic_name(self, post: Post) -> str:
-        age = human_age(post.created_at)
+        age = human_age(post.created_at, lang=self.lang)
         name = f"@{post.username}" + (f" · {age}" if age else "")
         return name[:128]  # Telegram topic name cap
 
@@ -228,18 +235,17 @@ class TelegramNotifier(Notifier):
         it lazily creates that post's topic and drafts replies (callback open:<id>).
         """
         posts = posts[:MAX_DIGEST_ITEMS]
-        now = datetime.now(CST).strftime("%H:%M")
-        lines = [f"🗂 <b>本轮 {len(posts)} 条新帖</b> · {now}（北京时间）"]
+        lines = [t(self.lang, "digest_header", n=len(posts), time=self._now_label())]
         buttons = []
         for i, post in enumerate(posts):
             c = self._circle(i)
-            age = human_age(post.created_at)
+            age = human_age(post.created_at, lang=self.lang)
             agetxt = f" · {age}" if age else ""
             if i < 30:
                 snippet = html.escape(truncate(post.text, 70))
                 lines.append(f"\n{c} <b>@{html.escape(post.username)}</b>{agetxt}\n{snippet}")
             buttons.append({"text": f"{c} @{post.username[:14]}", "callback_data": f"open:{post.tweet_id}"})
-        lines.append("\n\n👇 点一条 → 才为它建话题并写回复")
+        lines.append(t(self.lang, "index_tap"))
         rows = [buttons[j : j + 2] for j in range(0, len(buttons), 2)]
         result = self._call(
             "sendMessage",

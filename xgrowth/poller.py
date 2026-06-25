@@ -12,11 +12,16 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from .i18n import t
 from .orchestrator import Orchestrator
 from .store import Store
 from .twitter import RateLimited, TwitterError
 
 log = logging.getLogger("xgrowth.poller")
+
+
+def _lang_of(notifier) -> str:
+    return getattr(notifier, "lang", "en")
 
 
 def run_once(cfg: dict, store: Store, twitter, orch: Orchestrator) -> int:
@@ -72,7 +77,7 @@ def run_once(cfg: dict, store: Store, twitter, orch: Orchestrator) -> int:
         log.info("capped cycle: handled %s, skipped %s older new post(s)", len(new_posts), dropped)
         try:
             if orch.notifier.configured():
-                orch.notifier.send_text(f"⚠️ 本轮新帖较多,已处理最新 {len(new_posts)} 条,跳过 {dropped} 条较旧的。")
+                orch.notifier.send_text(t(_lang_of(orch.notifier), "cycle_capped", n=len(new_posts), dropped=dropped))
         except Exception:
             pass
     return len(new_posts)
@@ -95,6 +100,7 @@ class TelegramListener(threading.Thread):
         self.notifier = notifier
         self.store = store
         self.orch = orch
+        self._lang = getattr(notifier, "lang", "en")
         self._stop = threading.Event()
 
     def stop(self) -> None:
@@ -144,11 +150,11 @@ class TelegramListener(threading.Thread):
             existing = self.store.thread_for_tweet(tid) if forum else None
             if existing and hasattr(self.notifier, "topic_link"):
                 link = self.notifier.topic_link(int(existing))
-                self.notifier.answer_callback(cb_id, "已为这条建过话题")
+                self.notifier.answer_callback(cb_id, t(self._lang, "cb_topic_exists"))
                 if link:
-                    self.notifier.send_text(f"↑ 这条已有话题：{link}")
+                    self.notifier.send_text(t(self._lang, "topic_exists", link=link))
                 return
-            self.notifier.answer_callback(cb_id, "正在生成回复…")
+            self.notifier.answer_callback(cb_id, t(self._lang, "cb_generating"))
             result = self.orch.open_post(tid)  # lazy draft on first open
             if not result:
                 return
@@ -162,7 +168,7 @@ class TelegramListener(threading.Thread):
                         self.store.map_message(str(mid), tid)
                     link = self.notifier.topic_link(tid_thread)
                     if link:
-                        self.notifier.send_text(f"✅ 已建话题：{link}")
+                        self.notifier.send_text(t(self._lang, "topic_created", link=link))
                     return
             # dm fallback
             mid = self.notifier.send(post, cands)
@@ -172,7 +178,7 @@ class TelegramListener(threading.Thread):
 
         elif data.startswith("del:"):
             tid = data.split(":", 1)[1]
-            self.notifier.answer_callback(cb_id, "已删除话题")
+            self.notifier.answer_callback(cb_id, t(self._lang, "cb_deleted"))
             thread = msg.get("message_thread_id") or self.store.thread_for_tweet(tid)
             if thread is not None and hasattr(self.notifier, "delete_topic"):
                 self.notifier.delete_topic(int(thread))
@@ -199,7 +205,7 @@ class TelegramListener(threading.Thread):
         if not tid:
             tid = self.store.get_meta("active_tweet", "") or None
         if not tid:
-            self.notifier.send_text("先点开一条帖子（或在它的话题里）再告诉我怎么改～")
+            self.notifier.send_text(t(self._lang, "no_target"))
             return
         result = self.orch.regenerate(tid, instruction=text)
         if not result:

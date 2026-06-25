@@ -1,6 +1,9 @@
 # xgrowth configuration — copy to ~/.xgrowth/config.yaml (or run `xgrowth init`)
 # Every key here is BRING-YOUR-OWN. xgrowth never ships or proxies credentials.
 
+# UI language for Telegram messages, buttons, and CLI prompts: en | zh
+language: en
+
 twitter:
   # Which data provider to use: rapidapi (default) | official
   provider: rapidapi

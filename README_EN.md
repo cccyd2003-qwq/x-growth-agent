@@ -79,7 +79,7 @@ git clone https://github.com/cccyd2003-qwq/x-growth-agent && cd x-growth-agent &
 ## Quickstart
 
 ```bash
-xgrowth setup                      # guided wizard: keys, brain, Telegram, schedule in one go
+xgrowth setup                      # guided wizard: language, keys, brain, Telegram, schedule
 # (or manually: xgrowth init, then edit ~/.xgrowth/config.yaml)
 
 xgrowth test-notify                # confirms Telegram, auto-detects your chat_id
@@ -103,7 +103,8 @@ xgrowth draft "the most important skill of the next decade is learning to learn"
 
 | Command | Does |
 | --- | --- |
-| `xgrowth setup` | Guided wizard: keys, brain, Telegram, schedule |
+| `xgrowth setup` | Guided wizard: language, keys, brain, Telegram, schedule |
+| `xgrowth lang en\|zh` | Show/set the UI language (Telegram + prompts) |
 | `xgrowth init` | Create config + database |
 | `xgrowth schedule` | Show/change the polling schedule (interval + daily window) |
 | `xgrowth add <handle>` | Add an account to the watchlist |

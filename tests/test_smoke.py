@@ -75,10 +75,28 @@ def test_human_age():
     from xgrowth.util import human_age
 
     now = datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc)
-    assert human_age("Sun Jun 21 11:57:00 +0000 2026", now=now) == "3 分钟前"
-    assert human_age("Sun Jun 21 09:00:00 +0000 2026", now=now) == "3 小时前"
-    assert human_age("2026-06-21T11:59:30.000Z", now=now) == "刚刚"
+    # default English
+    assert human_age("Sun Jun 21 11:57:00 +0000 2026", now=now) == "3m ago"
+    assert human_age("Sun Jun 21 09:00:00 +0000 2026", now=now) == "3h ago"
+    assert human_age("2026-06-21T11:59:30.000Z", now=now) == "just now"
     assert human_age("", now=now) == ""
+    # Chinese
+    assert human_age("Sun Jun 21 11:57:00 +0000 2026", now=now, lang="zh") == "3 分钟前"
+    assert human_age("2026-06-21T11:59:30.000Z", now=now, lang="zh") == "刚刚"
+
+
+def test_i18n():
+    from xgrowth.i18n import t, normalize_lang
+
+    assert normalize_lang("EN") == "en"
+    assert normalize_lang("中文") == "zh"
+    assert normalize_lang(None) == "en"
+    assert normalize_lang("xx") == "en"  # unknown falls back
+    assert t("en", "btn_original") == "🔗 Original"
+    assert t("zh", "btn_original") == "🔗 看原帖"
+    assert "punchier" in t("en", "reply_hint")
+    # unknown key returns the key itself, never crashes
+    assert t("en", "nope_missing") == "nope_missing"
 
 
 def test_poll_window_wraps_midnight():

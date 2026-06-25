@@ -414,6 +414,13 @@ def setup() -> None:
     cfg = cfgmod.load_config()
     console.print("[bold]xgrowth setup[/]  ·  press Enter to keep the shown default.\n")
 
+    # --- Language ---
+    from .i18n import normalize_lang
+
+    cfg["language"] = normalize_lang(
+        typer.prompt("Language for Telegram & prompts (en/zh)", default=cfg.get("language", "en"))
+    )
+
     # --- Twitter ---
     tw = cfg["twitter"]
     tw["provider"] = typer.prompt("Twitter provider (rapidapi/official)",
@@ -454,6 +461,20 @@ def setup() -> None:
         "  [cyan]xgrowth add <handle>[/]  watch an account (or import-following)\n"
         "  [cyan]xgrowth start[/]         run the agent"
     )
+
+
+@app.command()
+def lang(value: Optional[str] = typer.Argument(None, help="Set UI language: en or zh.")) -> None:
+    """Show or set the UI language (Telegram messages, buttons, CLI prompts)."""
+    from .i18n import normalize_lang
+
+    cfg = cfgmod.load_config()
+    if value:
+        cfg["language"] = normalize_lang(value)
+        cfgmod.save_config(cfg)
+        console.print(f"[green]✓[/] language = [cyan]{cfg['language']}[/]")
+    else:
+        console.print(f"language = [cyan]{cfg.get('language', 'en')}[/]  (change: xgrowth lang en|zh)")
 
 
 def main() -> None:

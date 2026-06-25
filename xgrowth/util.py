@@ -90,8 +90,10 @@ def parse_tweet_time(s: str):
         return None
 
 
-def human_age(created_at: str, now: "datetime | None" = None) -> str:
-    """Chinese 'time ago' string from a tweet timestamp, computed at call time."""
+def human_age(created_at: str, now: "datetime | None" = None, lang: str = "en") -> str:
+    """Localized 'time ago' string from a tweet timestamp, computed at call time."""
+    from .i18n import t
+
     dt = parse_tweet_time(created_at)
     if not dt:
         return ""
@@ -99,11 +101,11 @@ def human_age(created_at: str, now: "datetime | None" = None) -> str:
     secs = max(0, (now - dt).total_seconds())
     minutes = int(secs // 60)
     if minutes < 1:
-        return "刚刚"
+        return t(lang, "just_now")
     if minutes < 60:
-        return f"{minutes} 分钟前"
+        return t(lang, "minutes_ago", n=minutes)
     hours = minutes // 60
     if hours < 24:
-        return f"{hours} 小时前"
+        return t(lang, "hours_ago", n=hours)
     days = hours // 24
-    return f"{days} 天前"
+    return t(lang, "days_ago", n=days)

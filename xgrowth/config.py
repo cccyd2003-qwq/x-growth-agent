@@ -14,6 +14,8 @@ from typing import Any
 import yaml
 
 DEFAULT_CONFIG: dict[str, Any] = {
+    # UI language for Telegram messages, buttons, and CLI prompts: en | zh
+    "language": "en",
     "twitter": {
         # provider: rapidapi (default) | official
         "provider": "rapidapi",
